@@ -9,6 +9,8 @@ services:
       PORT: 8000
     ports:
       - "127.0.0.1:8000:8000"
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     volumes:
       - ./data:/app/data
       - ./.env:/app/.env
