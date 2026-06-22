@@ -16,7 +16,9 @@ Local app URL:
 http://127.0.0.1:8000
 ```
 
-## Docker Run
+## Server Run
+
+The app runs in Docker. Caddy runs on the host and provides HTTPS.
 
 Create `.env` on the server:
 
@@ -29,13 +31,13 @@ HOST=0.0.0.0
 PORT=8000
 ```
 
-Run:
+Run the app container:
 
 ```bash
 docker compose up -d --build
 ```
 
-Caddy will expose HTTPS for `APP_DOMAIN` and proxy traffic to the Python app.
+Caddy reverse-proxies HTTPS traffic to `127.0.0.1:8000`.
 
 ## Telegram Commands
 
@@ -46,4 +48,4 @@ Caddy will expose HTTPS for `APP_DOMAIN` and proxy traffic to the Python app.
 
 ## Security
 
-Do not commit `.env`, `Server.rtf`, local database files, screenshots, or VPN/SSH credentials.
+Do not commit `.env`, `Server.rtf`, local database files, screenshots, VPN configs, SSH credentials, or API tokens.
