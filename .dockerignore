@@ -1,0 +1,10 @@
+.git
+.env
+Server.rtf
+*.rtf
+.DS_Store
+__pycache__/
+*.pyc
+data/
+*preview*.png
+fresh-tunnel-check.png

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Family Dent — запись</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="./styles.css?v=2" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Family Dent</p>
+          <h1>Запись на прием</h1>
+          <p>Выберите врача, дату и свободное время консультации.</p>
+        </div>
+        <div class="status-pill" id="appStatus">Тестовая версия</div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>Врач</h2>
+          <span>2 специалиста</span>
+        </div>
+        <div class="doctor-grid" id="doctorGrid"></div>
+      </section>
+
+      <section class="section section-calendar">
+        <div class="section-head">
+          <h2>Дата</h2>
+          <span id="dateHint">Выберите день</span>
+        </div>
+        <div class="date-strip" id="dateStrip"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>Время</h2>
+          <span id="slotHint">Свободные окна</span>
+        </div>
+        <div class="slot-grid" id="slotGrid"></div>
+      </section>
+
+      <section class="section form-section">
+        <div class="section-head">
+          <h2>Данные пациента</h2>
+          <span id="bookingHint">Подтверждение записи</span>
+        </div>
+        <form id="bookingForm" class="booking-form">
+          <label>
+            <span>Имя</span>
+            <input name="patient_name" placeholder="Ваше имя" autocomplete="name" required />
+          </label>
+          <label>
+            <span>Телефон</span>
+            <input name="phone" placeholder="Телефон" autocomplete="tel" required />
+          </label>
+          <label>
+            <span>Услуга</span>
+            <select name="service" required>
+              <option value="Первичная консультация">Первичная консультация</option>
+              <option value="Лечение зуба">Лечение зуба</option>
+              <option value="Профилактика и чистка">Профилактика и чистка</option>
+              <option value="Ортопедия">Ортопедия</option>
+            </select>
+          </label>
+          <label>
+            <span>Комментарий</span>
+            <textarea name="comment" placeholder="Коротко опишите вопрос" rows="3"></textarea>
+          </label>
+          <button class="primary-button" type="submit">Записаться</button>
+        </form>
+        <div class="result" id="resultBox" hidden></div>
+      </section>
+    </main>
+    <script src="./app.js?v=2"></script>
+  </body>
+</html>

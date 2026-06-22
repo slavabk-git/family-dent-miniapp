@@ -1,0 +1,17 @@
+# Local secrets
+.env
+
+# Local database
+data/*.db
+data/*.db-*
+
+# System files
+.DS_Store
+__pycache__/
+*.pyc
+
+# Local screenshots
+*preview*.png
+Server.rtf
+*.rtf
+fresh-tunnel-check.png
