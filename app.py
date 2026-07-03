@@ -52,6 +52,53 @@ def db_connect():
     return conn
 
 
+def ensure_future_slots(conn, horizon_days=366):
+    doctors = conn.execute("SELECT id FROM doctors ORDER BY id").fetchall()
+    if not doctors:
+        return
+
+    start = date.today()
+    end = start + timedelta(days=horizon_days)
+    existing = {
+        (row["doctor_id"], row["date"])
+        for row in conn.execute(
+            """
+            SELECT DISTINCT doctor_id, date
+            FROM slots
+            WHERE date BETWEEN ? AND ?
+            """,
+            (start.isoformat(), end.isoformat()),
+        )
+    }
+    times_by_doctor = [
+        ["09:30", "11:00", "13:30", "16:00"],
+        ["10:00", "12:30", "15:00", "18:00"],
+    ]
+    rows = []
+    current = start
+    while current <= end:
+        if current.weekday() < 6:
+            for doctor_index, doctor in enumerate(doctors):
+                key = (doctor["id"], current.isoformat())
+                if key in existing:
+                    continue
+                times = times_by_doctor[doctor_index % len(times_by_doctor)]
+                for time_index, slot_time in enumerate(times):
+                    status = (
+                        "busy"
+                        if (current.toordinal() + doctor_index + time_index) % 5 == 0
+                        else "free"
+                    )
+                    rows.append((doctor["id"], current.isoformat(), slot_time, status))
+        current += timedelta(days=1)
+
+    if rows:
+        conn.executemany(
+            "INSERT INTO slots (doctor_id, date, time, status) VALUES (?, ?, ?, ?)",
+            rows,
+        )
+
+
 def init_db():
     DATA_DIR.mkdir(exist_ok=True)
     with db_connect() as conn:
@@ -109,31 +156,7 @@ def init_db():
                 ],
             )
 
-        slots_count = conn.execute("SELECT COUNT(*) AS count FROM slots").fetchone()["count"]
-        if slots_count == 0:
-            doctors = conn.execute("SELECT id FROM doctors ORDER BY id").fetchall()
-            times_by_doctor = {
-                0: ["09:30", "11:00", "13:30", "16:00"],
-                1: ["10:00", "12:30", "15:00", "18:00"],
-            }
-            start = date.today()
-            rows = []
-            working_days = []
-            cursor = start
-            while len(working_days) < 14:
-                if cursor.weekday() < 6:
-                    working_days.append(cursor)
-                cursor += timedelta(days=1)
-
-            for day_index, day in enumerate(working_days):
-                for doctor_index, doctor in enumerate(doctors):
-                    for time_index, slot_time in enumerate(times_by_doctor[doctor_index]):
-                        status = "busy" if (day_index + doctor_index + time_index) % 5 == 0 else "free"
-                        rows.append((doctor["id"], day.isoformat(), slot_time, status))
-            conn.executemany(
-                "INSERT INTO slots (doctor_id, date, time, status) VALUES (?, ?, ?, ?)",
-                rows,
-            )
+        ensure_future_slots(conn)
 
 
 def json_response(handler, data, status=200):
@@ -201,6 +224,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         if not doctor_id:
             return json_response(self, {"error": "doctor_id is required"}, 400)
         with db_connect() as conn:
+            ensure_future_slots(conn)
+            start = date.today()
+            end = start + timedelta(days=366)
             rows = conn.execute(
                 """
                 SELECT date,
@@ -208,10 +234,11 @@ class AppHandler(SimpleHTTPRequestHandler):
                        COUNT(*) AS total_count
                 FROM slots
                 WHERE doctor_id = ?
+                  AND date BETWEEN ? AND ?
                 GROUP BY date
                 ORDER BY date
                 """,
-                (doctor_id,),
+                (doctor_id, start.isoformat(), end.isoformat()),
             ).fetchall()
         return json_response(self, {"dates": [dict(row) for row in rows]})
 

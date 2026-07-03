@@ -31,7 +31,19 @@
           <h2>Дата</h2>
           <span id="dateHint">Выберите день</span>
         </div>
-        <div class="date-strip" id="dateStrip"></div>
+        <div class="calendar-toolbar">
+          <button class="calendar-nav" id="previousMonth" type="button" aria-label="Предыдущий месяц">
+            <span aria-hidden="true">‹</span>
+          </button>
+          <div>
+            <strong id="monthLabel">Месяц</strong>
+            <span>Расписание на 12 месяцев вперёд</span>
+          </div>
+          <button class="calendar-nav" id="nextMonth" type="button" aria-label="Следующий месяц">
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
+        <div class="calendar-grid" id="dateStrip" aria-label="Календарь записи"></div>
       </section>
 
       <section class="section">
@@ -74,6 +86,6 @@
         <div class="result" id="resultBox" hidden></div>
       </section>
     </main>
-    <script src="./app.js?v=2"></script>
+    <script src="./app.js?v=3"></script>
   </body>
 </html>

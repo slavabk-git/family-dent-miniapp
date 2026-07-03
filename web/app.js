@@ -9,6 +9,7 @@ const state = {
   doctorId: null,
   date: null,
   slotId: null,
+  visibleMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
 };
 
 const doctorGrid = document.querySelector('#doctorGrid');
@@ -19,9 +20,13 @@ const slotHint = document.querySelector('#slotHint');
 const bookingHint = document.querySelector('#bookingHint');
 const bookingForm = document.querySelector('#bookingForm');
 const resultBox = document.querySelector('#resultBox');
+const monthLabel = document.querySelector('#monthLabel');
+const previousMonth = document.querySelector('#previousMonth');
+const nextMonth = document.querySelector('#nextMonth');
 
 const ruWeekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const ruMonths = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const calendarWeekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 async function api(path, options) {
   const response = await fetch(path, {
@@ -43,6 +48,17 @@ function formatDate(dateText) {
   };
 }
 
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function monthKey(date) {
+  return date.getFullYear() * 12 + date.getMonth();
+}
+
 function renderDoctors() {
   doctorGrid.innerHTML = '';
   state.doctors.forEach((doctor) => {
@@ -61,19 +77,65 @@ function renderDoctors() {
 
 function renderDates() {
   dateStrip.innerHTML = '';
-  state.dates.forEach((item) => {
-    const formatted = formatDate(item.date);
+  calendarWeekdays.forEach((weekday) => {
+    const label = document.createElement('span');
+    label.className = 'calendar-weekday';
+    label.textContent = weekday;
+    dateStrip.append(label);
+  });
+
+  const formattedMonth = new Intl.DateTimeFormat('ru-RU', {
+    month: 'long',
+    year: 'numeric',
+  }).format(state.visibleMonth);
+  monthLabel.textContent = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+
+  const dateMap = new Map(state.dates.map((item) => [item.date, item]));
+  const year = state.visibleMonth.getFullYear();
+  const month = state.visibleMonth.getMonth();
+  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const previousMonthDays = new Date(year, month, 0).getDate();
+  const cellCount = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+
+  for (let index = 0; index < cellCount; index += 1) {
+    const day = index - firstWeekday + 1;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `date-button ${item.free_count === 0 ? 'busy' : ''} ${item.date === state.date ? 'active' : ''}`;
-    button.innerHTML = `
-      <strong>${formatted.day}</strong>
-      <span>${formatted.label}</span>
-      <span>${item.free_count > 0 ? `${item.free_count} окна` : 'занято'}</span>
-    `;
-    button.addEventListener('click', () => selectDate(item.date));
+    button.className = 'date-button';
+
+    if (day < 1 || day > daysInMonth) {
+      button.classList.add('muted');
+      button.textContent = day < 1 ? previousMonthDays + day : day - daysInMonth;
+      button.disabled = true;
+      dateStrip.append(button);
+      continue;
+    }
+
+    const date = new Date(year, month, day, 12);
+    const dateKey = toDateKey(date);
+    const item = dateMap.get(dateKey);
+    const freeCount = Number(item?.free_count || 0);
+    button.dataset.date = dateKey;
+    button.setAttribute('aria-label', formatDate(dateKey).label);
+    button.innerHTML = `<strong>${day}</strong><span>${freeCount > 0 ? `${freeCount} св.` : 'занято'}</span>`;
+
+    if (!item || freeCount === 0) {
+      button.classList.add('busy');
+      button.disabled = true;
+    } else {
+      button.addEventListener('click', () => selectDate(dateKey));
+    }
+    if (dateKey === state.date) button.classList.add('active');
     dateStrip.append(button);
-  });
+  }
+
+  const firstAvailable = state.dates.find((item) => Number(item.free_count) > 0);
+  const lastAvailable = [...state.dates].reverse().find((item) => Number(item.free_count) > 0);
+  previousMonth.disabled = !firstAvailable
+    || monthKey(state.visibleMonth) <= monthKey(new Date(`${firstAvailable.date}T12:00:00`));
+  nextMonth.disabled = !lastAvailable
+    || monthKey(state.visibleMonth) >= monthKey(new Date(`${lastAvailable.date}T12:00:00`));
 }
 
 function renderSlots() {
@@ -100,6 +162,10 @@ async function selectDoctor(doctorId) {
   const data = await api(`/api/dates?doctor_id=${doctorId}`);
   state.dates = data.dates;
   state.date = state.dates.find((item) => item.free_count > 0)?.date || state.dates[0]?.date || null;
+  if (state.date) {
+    const selected = new Date(`${state.date}T12:00:00`);
+    state.visibleMonth = new Date(selected.getFullYear(), selected.getMonth(), 1);
+  }
   renderDates();
   if (state.date) await selectDate(state.date);
 }
@@ -115,6 +181,24 @@ async function selectDate(date) {
   bookingHint.textContent = 'Выберите свободное время';
   renderSlots();
 }
+
+previousMonth.addEventListener('click', () => {
+  state.visibleMonth = new Date(
+    state.visibleMonth.getFullYear(),
+    state.visibleMonth.getMonth() - 1,
+    1,
+  );
+  renderDates();
+});
+
+nextMonth.addEventListener('click', () => {
+  state.visibleMonth = new Date(
+    state.visibleMonth.getFullYear(),
+    state.visibleMonth.getMonth() + 1,
+    1,
+  );
+  renderDates();
+});
 
 bookingForm.addEventListener('submit', async (event) => {
   event.preventDefault();
