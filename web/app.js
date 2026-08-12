@@ -118,7 +118,7 @@ function renderDates() {
     const freeCount = Number(item?.free_count || 0);
     button.dataset.date = dateKey;
     button.setAttribute('aria-label', formatDate(dateKey).label);
-    button.innerHTML = `<strong>${day}</strong><span>${freeCount > 0 ? `${freeCount} св.` : 'занято'}</span>`;
+    button.innerHTML = `<strong>${day}</strong><span>${freeCount > 0 ? `${freeCount} св.` : ''}</span>`;
 
     if (!item || freeCount === 0) {
       button.classList.add('busy');
@@ -140,12 +140,11 @@ function renderDates() {
 
 function renderSlots() {
   slotGrid.innerHTML = '';
-  state.slots.forEach((slot) => {
+  state.slots.filter((slot) => slot.status === 'free').forEach((slot) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `slot-button ${slot.status === 'busy' ? 'busy' : ''} ${slot.id === state.slotId ? 'active' : ''}`;
-    button.textContent = slot.status === 'free' ? `${slot.time} свободно` : `${slot.time} занято`;
-    button.disabled = slot.status !== 'free';
+    button.className = `slot-button ${slot.id === state.slotId ? 'active' : ''}`;
+    button.textContent = `${slot.time} свободно`;
     button.addEventListener('click', () => {
       state.slotId = slot.id;
       bookingHint.textContent = `Выбрано ${slot.date}, ${slot.time}`;
