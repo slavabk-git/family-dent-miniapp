@@ -1,0 +1,8 @@
+{
+  "name": "family-dent-miniapp",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1"
+  }
+}
