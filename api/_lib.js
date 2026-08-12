@@ -56,8 +56,7 @@ export async function ensureDatabase() {
 export async function ensureFutureSlots() {
   const sql = db();
   await sql`INSERT INTO slots (doctor_id, date, time, status)
-    SELECT d.id, calendar.day::date, schedule.time,
-      CASE WHEN ((EXTRACT(EPOCH FROM calendar.day)::bigint / 86400) + d.position + schedule.position) % 5 = 0 THEN 'busy' ELSE 'free' END
+    SELECT d.id, calendar.day::date, schedule.time, 'free'
     FROM (
       SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 AS position FROM doctors
     ) d
