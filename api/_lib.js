@@ -55,28 +55,21 @@ export async function ensureDatabase() {
 
 export async function ensureFutureSlots() {
   const sql = db();
-  const doctors = await sql`SELECT id FROM doctors ORDER BY id`;
-  const start = new Date();
-  start.setHours(12, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 366);
-  const rows = [];
-  for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-    if (day.getDay() === 0) continue;
-    const date = day.toISOString().slice(0, 10);
-    doctors.forEach((doctor, doctorIndex) => {
-      const times = doctorIndex % 2 === 0 ? ['09:30', '11:00', '13:30', '16:00'] : ['10:00', '12:30', '15:00', '18:00'];
-      times.forEach((time, timeIndex) => {
-        const status = ((Math.floor(day / 86400000) + doctorIndex + timeIndex) % 5 === 0) ? 'busy' : 'free';
-        rows.push({ doctorId: doctor.id, date, time, status });
-      });
-    });
-  }
-  for (const row of rows) {
-    await sql`INSERT INTO slots (doctor_id, date, time, status)
-      VALUES (${row.doctorId}, ${row.date}, ${row.time}, ${row.status})
-      ON CONFLICT (doctor_id, date, time) DO NOTHING`;
-  }
+  await sql`INSERT INTO slots (doctor_id, date, time, status)
+    SELECT d.id, calendar.day::date, schedule.time,
+      CASE WHEN ((EXTRACT(EPOCH FROM calendar.day)::bigint / 86400) + d.position + schedule.position) % 5 = 0 THEN 'busy' ELSE 'free' END
+    FROM (
+      SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 AS position FROM doctors
+    ) d
+    CROSS JOIN generate_series(CURRENT_DATE, CURRENT_DATE + 366, INTERVAL '1 day') AS calendar(day)
+    CROSS JOIN LATERAL unnest(
+      CASE WHEN d.position % 2 = 0
+        THEN ARRAY['09:30', '11:00', '13:30', '16:00']
+        ELSE ARRAY['10:00', '12:30', '15:00', '18:00']
+      END
+    ) WITH ORDINALITY AS schedule(time, position)
+    WHERE EXTRACT(DOW FROM calendar.day) <> 0
+    ON CONFLICT (doctor_id, date, time) DO NOTHING`;
 }
 
 export async function telegram(method, payload) {

@@ -7,11 +7,16 @@ export default async function handler(req, res) {
     const missing = required.filter((key) => !String(data[key] || '').trim());
     if (missing.length) return json(res, 400, { error: 'Missing fields', fields: missing });
     await ensureDatabase(); const sql = db();
-    const claimed = await sql`UPDATE slots SET status = 'busy'
-      WHERE id = ${Number(data.slot_id)} AND doctor_id = ${Number(data.doctor_id)} AND status = 'free' RETURNING id`;
-    if (!claimed.length) throw new Error('Выбранное время уже занято. Выберите другое.');
-    const inserted = await sql`INSERT INTO bookings (slot_id, doctor_id, patient_name, phone, service, comment)
-      VALUES (${claimed[0].id}, ${Number(data.doctor_id)}, ${String(data.patient_name).trim()}, ${String(data.phone).trim()}, ${String(data.service).trim()}, ${String(data.comment || '').trim() || null}) RETURNING id`;
+    const inserted = await sql`WITH claimed AS (
+      UPDATE slots SET status = 'busy'
+      WHERE id = ${Number(data.slot_id)} AND doctor_id = ${Number(data.doctor_id)} AND status = 'free'
+      RETURNING id
+    )
+    INSERT INTO bookings (slot_id, doctor_id, patient_name, phone, service, comment)
+    SELECT id, ${Number(data.doctor_id)}, ${String(data.patient_name).trim()}, ${String(data.phone).trim()}, ${String(data.service).trim()}, ${String(data.comment || '').trim() || null}
+    FROM claimed
+    RETURNING id`;
+    if (!inserted.length) throw new Error('Выбранное время уже занято. Выберите другое.');
     const result = inserted[0].id;
     const booking = (await sql`SELECT b.id, b.patient_name, b.phone, b.service, b.comment, d.name AS doctor_name, s.date::text AS date, s.time
       FROM bookings b JOIN doctors d ON d.id = b.doctor_id JOIN slots s ON s.id = b.slot_id WHERE b.id = ${result}`)[0];
