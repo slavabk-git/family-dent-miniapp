@@ -176,7 +176,7 @@ async function selectDate(date) {
   renderDates();
   const data = await api(`/api/slots?doctor_id=${state.doctorId}&date=${date}`);
   state.slots = data.slots;
-  slotHint.textContent = state.slots.some((slot) => slot.status === 'free') ? 'Есть свободные окна' : 'Все окна заняты';
+  slotHint.textContent = state.slots.some((slot) => slot.status === 'free') ? 'Есть свободные окна' : 'Нет свободных окон';
   bookingHint.textContent = 'Выберите свободное время';
   renderSlots();
 }
