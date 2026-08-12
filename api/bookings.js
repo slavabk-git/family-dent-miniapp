@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const booking = (await sql`SELECT b.id, b.patient_name, b.phone, b.service, b.comment, d.name AS doctor_name, s.date::text AS date, s.time
       FROM bookings b JOIN doctors d ON d.id = b.doctor_id JOIN slots s ON s.id = b.slot_id WHERE b.id = ${result}`)[0];
     const text = `Новая заявка Family Dent.\n\n${bookingText(booking)}`;
-    const targets = [data.telegram_user_id, process.env.ADMIN_CHAT_ID].filter(Boolean);
+    const targets = [...new Set([data.telegram_user_id, process.env.ADMIN_CHAT_ID].filter(Boolean))];
     await Promise.allSettled(targets.map((chat_id) => telegram('sendMessage', { chat_id, text })));
     json(res, 201, { ok: true, booking_id: result, booking, notification_sent: Boolean(data.telegram_user_id), admin_notification_sent: Boolean(process.env.ADMIN_CHAT_ID) });
   } catch (error) { json(res, error.message.includes('занято') ? 409 : 500, { error: error.message }); }
